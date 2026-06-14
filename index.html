@@ -60,6 +60,34 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <li>No number is repeated in a horizontal row</li>
       <li>Each number 1–7 appears exactly once across all 7 grey cells</li>
     </ol>
+    <div style="margin-top:12px;border-top:1px solid #f0e8dc;padding-top:12px;">
+      <div style="font-size:12px;color:#555;font-family:sans-serif;font-weight:600;margin-bottom:6px;">Load a puzzle</div>
+      <div style="font-size:11px;color:#888;font-family:sans-serif;margin-bottom:8px;">Enter a 31-character string — digits 1–7 for clues, period for empty cells.</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="load-input" type="text" maxlength="62" placeholder="e.g. 1.3..2.....7....." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          style="flex:1;padding:7px 10px;border:1px solid #ddd4c4;border-radius:8px;font-size:13px;font-family:Georgia,serif;background:#faf8f4;color:#333;outline:none;"
+          onkeydown="if(event.key==='Enter')loadPuzzle()">
+        <button onclick="loadPuzzle()"
+          style="padding:7px 14px;border-radius:8px;background:#2c2c2c;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;white-space:nowrap;">
+          Load
+        </button>
+      </div>
+      <div id="load-error" style="font-size:11px;color:#c0392b;font-family:sans-serif;margin-top:5px;display:none;"></div>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid #f0e8dc;padding-top:12px;">
+      <div style="font-size:12px;color:#555;font-family:sans-serif;font-weight:600;margin-bottom:6px;">Export current puzzle</div>
+      <div style="font-size:11px;color:#888;font-family:sans-serif;margin-bottom:8px;">Copy this string to share or save the current puzzle clues.</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="export-output" type="text" readonly placeholder="Generate a puzzle first…"
+          style="flex:1;padding:7px 10px;border:1px solid #ddd4c4;border-radius:8px;font-size:13px;font-family:Georgia,serif;background:#f0ede8;color:#555;outline:none;cursor:default;"
+          onclick="this.select()">
+        <button onclick="exportPuzzle()"
+          style="padding:7px 14px;border-radius:8px;background:#2c2c2c;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;white-space:nowrap;">
+          Copy
+        </button>
+      </div>
+      <div id="export-msg" style="font-size:11px;color:#27ae60;font-family:sans-serif;margin-top:5px;display:none;"></div>
+    </div>
   </div>
 </div>
 
@@ -436,6 +464,7 @@ function generate(){
     renderGrid();
     document.getElementById('gen-overlay').style.display='none';
     document.getElementById('status').textContent=`${puzzle.clues.filter(v=>v!==0).length} clues`;
+    updateExportField();
   },40);
 }
 
@@ -446,6 +475,113 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Backspace'||e.key==='Delete')placeNumber(0);
   if(e.key==='Escape'){selected=null;renderGrid();}
 });
+
+function exportPuzzle(){
+  if(!puzzle){return;}
+  const str=puzzle.clues.map(v=>v===0?'.':v).join('');
+  const field=document.getElementById('export-output');
+  field.value=str;
+  const msg=document.getElementById('export-msg');
+  // Try clipboard, fall back to just showing the string selected
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(()=>{
+      msg.textContent='Copied to clipboard!';msg.style.color='#27ae60';msg.style.display='block';
+      setTimeout(()=>msg.style.display='none',2500);
+    }).catch(()=>{
+      field.select();
+      msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';
+    });
+  } else {
+    field.select();
+    msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';
+  }
+}
+
+function updateExportField(){
+  if(!puzzle)return;
+  const field=document.getElementById('export-output');
+  if(field)field.value=puzzle.clues.map(v=>v===0?'.':v).join('');
+}
+
+function loadPuzzle(){
+  const errEl=document.getElementById('load-error');
+  errEl.style.display='none';
+  // Normalise: replace Unicode ellipsis (…) and any run of dots with individual periods
+  const raw=document.getElementById('load-input').value.trim()
+    .replace(/\u2026/g,'...')   // Unicode ellipsis → three periods
+    .replace(/\.{2,}/g,m=>'.'.repeat(m.length)); // already fine, but keeps intent clear
+
+  // Validate length
+  if(raw.length!==31){
+    errEl.textContent=`String must be exactly 31 characters (got ${raw.length}).`;
+    errEl.style.display='block';return;
+  }
+  // Validate characters
+  if(!/^[1-7.]+$/.test(raw)){
+    errEl.textContent='Only digits 1–7 and periods (.) are allowed.';
+    errEl.style.display='block';return;
+  }
+
+  // Build clues array
+  const clues=raw.split('').map(c=>c==='.'?0:parseInt(c));
+
+  // Check for constraint conflicts in given clues
+  const u=new Array(15).fill(0);
+  for(let c=0;c<31;c++){
+    if(clues[c]){
+      const b=1<<clues[c];
+      for(const si of CELL_SETS[c]){
+        if(u[si]&b){
+          errEl.textContent='This string contains conflicting clues — a digit repeats within a group.';
+          errEl.style.display='block';return;
+        }
+        u[si]|=b;
+      }
+    }
+  }
+
+  // Solve to get the full solution (and check it has exactly one)
+  const sols=[];
+  const a=[...clues],su=new Array(15).fill(0);
+  for(let c=0;c<31;c++){if(a[c]){const b=1<<a[c];for(const si of CELL_SETS[c])su[si]|=b;}}
+  function bt(c){
+    if(sols.length>1)return;
+    if(c===31){sols.push([...a]);return;}
+    if(a[c]!==0){bt(c+1);return;}
+    for(let v=1;v<=7;v++){
+      if(sols.length>1)return;
+      const b=1<<v;let ok=true;
+      for(const si of CELL_SETS[c])if(su[si]&b){ok=false;break;}
+      if(ok){a[c]=v;for(const si of CELL_SETS[c])su[si]|=b;bt(c+1);a[c]=0;for(const si of CELL_SETS[c])su[si]^=b;}
+    }
+  }
+  bt(0);
+
+  if(sols.length===0){
+    errEl.textContent='No valid solution exists for this puzzle.';
+    errEl.style.display='block';return;
+  }
+  if(sols.length>1){
+    errEl.textContent='This puzzle has multiple solutions — add more clues to make it unique.';
+    errEl.style.display='block';return;
+  }
+
+  // All good — load it
+  puzzle={clues,solution:sols[0]};
+  userVals=[...clues];
+  notes=Array.from({length:31},()=>new Set());
+  errors=new Set();solved=false;showSolution=false;selected=null;noteMode=false;
+  document.getElementById('btn-pencil').classList.remove('on');
+  document.getElementById('btn-solution').textContent='Reveal Solution';
+  document.getElementById('btn-solution').classList.remove('active');
+  document.getElementById('solved-banner').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('load-input').value='';
+  const n=clues.filter(v=>v!==0).length;
+  document.getElementById('status').textContent=`Loaded — ${n} clues`;
+  updateExportField();
+  renderGrid();
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 buildGrid();
