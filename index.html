@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rosetta">
+<title>Rosetta</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#f5f0e8;font-family:Georgia,'Times New Roman',serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px 16px 40px;}
+h1{font-size:32px;font-weight:800;letter-spacing:3px;color:#1a1a1a;text-align:center;margin-bottom:16px;}
+.card{background:#fff;border-radius:12px;border:1px solid #e0d8cc;box-shadow:0 1px 4px rgba(0,0,0,.06);width:100%;max-width:340px;margin-bottom:14px;}
+.rules-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 18px;background:none;border:none;cursor:pointer;font-size:13px;color:#555;font-family:sans-serif;font-weight:600;}
+.rules-body{padding:0 18px 14px;border-top:1px solid #f0e8dc;font-family:sans-serif;}
+.rules-body p{font-size:12px;color:#444;line-height:1.6;margin:10px 0;}
+.rules-body ol{margin:0;padding-left:18px;font-size:12px;color:#444;line-height:1.8;}
+.diff-card{padding:12px 18px;}
+.diff-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.diff-label{font-size:13px;color:#666;font-family:sans-serif;}
+.diff-value{font-size:13px;font-weight:700;font-family:sans-serif;}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:#ddd4c4;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#2c2c2c;cursor:pointer;}
+.diff-ends{display:flex;justify-content:space-between;font-size:11px;color:#aaa;margin-top:3px;font-family:sans-serif;}
+.grid-wrap{position:relative;background:#fff;border-radius:16px;padding:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #e0d8cc;margin-bottom:14px;}
+.overlay{position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.numpad{display:flex;gap:6px;margin-bottom:14px;justify-content:center;}
+.numpad button{width:40px;height:40px;border-radius:50%;font-size:17px;font-weight:700;font-family:Georgia,serif;cursor:pointer;transition:all .12s;border:1px solid #ddd4c4;background:#f5f0e8;color:#bbb;}
+.numpad button.active{background:#fff;border:2px solid #66bb6a;color:#2e7d32;}
+.numpad .clr{font-size:13px;font-family:sans-serif;}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.btn-primary{padding:9px 20px;border-radius:8px;background:#2c2c2c;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;}
+.btn-secondary{padding:9px 20px;border-radius:8px;background:#fff;border:1px solid #d0c8bc;color:#555;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;}
+.btn-secondary.active{background:#e8e0d4;}
+.status{font-size:12px;color:#999;margin-bottom:10px;font-family:sans-serif;text-align:center;}
+.solved-banner{background:#eafaf1;border:1px solid #a9dfbf;border-radius:10px;padding:8px 20px;font-size:14px;color:#1e8449;font-family:sans-serif;margin-bottom:12px;font-weight:600;}
+.rules-diagram{display:flex;gap:12px;align-items:flex-start;}
+</style>
+</head>
+<body>
+<h1>ROSETTA</h1>
+
+<!-- Rules -->
+<div class="card">
+  <button class="rules-toggle" onclick="toggleRules()">
+    <span>How to play</span><span id="rules-arrow">▼</span>
+  </button>
+  <div class="rules-body" id="rules-body" style="display:none">
+    <div class="rules-diagram">
+      <p>A <strong>Rosetta</strong> is a centre coloured hexagon encircled by 6 white hexagons. Fill all 7 Rosettas with each number 1–7 in no particular order, ensuring:</p>
+      <svg width="70" height="72" viewBox="0 0 70 72" style="flex-shrink:0">
+        <script>/* mini diagram */</script>
+      </svg>
+    </div>
+    <ol>
+      <li>No number is repeated in a horizontal row</li>
+      <li>Each number 1–7 appears exactly once across all 7 grey cells</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Difficulty -->
+<div class="card diff-card">
+  <div class="diff-row">
+    <span class="diff-label">Difficulty</span>
+    <span class="diff-value" id="diff-label">Medium</span>
+  </div>
+  <input type="range" id="diff-slider" min="8" max="30" value="20" oninput="onDiffChange(this.value)">
+  <div class="diff-ends"><span>Expert</span><span id="clue-count">20 clues</span><span>Beginner</span></div>
+</div>
+
+<!-- Grid -->
+<div class="grid-wrap">
+  <svg id="grid-svg" style="display:block;touch-action:manipulation"></svg>
+  <div class="overlay" id="gen-overlay" style="display:none;background:rgba(255,255,255,.8)">
+    <span style="font-size:14px;color:#888;font-family:sans-serif">Generating…</span>
+  </div>
+  <div class="overlay" id="win-overlay" style="display:none;background:rgba(255,255,255,.93)">
+    <div style="font-size:48px">🎉</div>
+    <div style="font-size:22px;font-weight:700;color:#27ae60;margin-top:8px;font-family:sans-serif">Solved!</div>
+  </div>
+</div>
+
+<div id="solved-banner" class="solved-banner" style="display:none">✓ Puzzle complete!</div>
+<div id="status" class="status"></div>
+
+<!-- Number pad -->
+<div class="numpad" id="numpad">
+  <button onclick="placeNumber(1)">1</button>
+  <button onclick="placeNumber(2)">2</button>
+  <button onclick="placeNumber(3)">3</button>
+  <button onclick="placeNumber(4)">4</button>
+  <button onclick="placeNumber(5)">5</button>
+  <button onclick="placeNumber(6)">6</button>
+  <button onclick="placeNumber(7)">7</button>
+  <button class="clr" onclick="placeNumber(0)">✕</button>
+</div>
+
+<!-- Actions -->
+<div class="actions">
+  <button class="btn-primary" onclick="generate()">New Puzzle</button>
+  <button class="btn-secondary" id="btn-solution" onclick="toggleSolution()">Reveal Solution</button>
+  <button class="btn-secondary" onclick="resetPuzzle()">Reset</button>
+</div>
+
+<script>
+// ── Constraints ──────────────────────────────────────────────────────────────
+const SETS=[
+  [0,1,3,4,5,9,10],[2,3,7,8,9,13,14],[5,6,10,11,12,16,17],
+  [9,10,14,15,16,20,21],[13,14,18,19,20,24,25],[16,17,21,22,23,27,28],
+  [20,21,25,26,27,29,30],[4,8,11,15,19,22,26],
+  [0,1],[2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17],
+  [18,19,20,21,22,23],[24,25,26,27,28],[29,30],
+];
+const ROWS=[[0,1],[2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17],[18,19,20,21,22,23],[24,25,26,27,28],[29,30]];
+const GRAY=new Set([4,8,11,15,19,22,26]);
+const CELL_SETS=Array.from({length:31},(_,i)=>SETS.reduce((a,s,si)=>(s.includes(i)?[...a,si]:a),[]));
+
+// ── Solver ───────────────────────────────────────────────────────────────────
+function countSolutions(clues,limit=2){
+  let count=0;
+  const a=[...clues],u=new Array(15).fill(0);
+  for(let c=0;c<31;c++){if(a[c]){const b=1<<a[c];for(const si of CELL_SETS[c]){if(u[si]&b)return 0;u[si]|=b;}}}
+  function bt(c){
+    if(count>=limit)return;
+    if(c===31){count++;return;}
+    if(a[c]!==0){bt(c+1);return;}
+    for(let v=1;v<=7;v++){
+      if(count>=limit)return;
+      const b=1<<v;let ok=true;
+      for(const si of CELL_SETS[c])if(u[si]&b){ok=false;break;}
+      if(ok){a[c]=v;for(const si of CELL_SETS[c])u[si]|=b;bt(c+1);a[c]=0;for(const si of CELL_SETS[c])u[si]^=b;}
+    }
+  }
+  bt(0);return count;
+}
+
+function generatePuzzle(clueCount){
+  const u=new Array(15).fill(0),a=new Array(31).fill(0);
+  function rnd(c){
+    if(c===31)return true;
+    const vs=[1,2,3,4,5,6,7].sort(()=>Math.random()-.5);
+    for(const v of vs){
+      const b=1<<v;let ok=true;
+      for(const si of CELL_SETS[c])if(u[si]&b){ok=false;break;}
+      if(ok){a[c]=v;for(const si of CELL_SETS[c])u[si]|=b;if(rnd(c+1))return true;a[c]=0;for(const si of CELL_SETS[c])u[si]^=b;}
+    }
+    return false;
+  }
+  rnd(0);
+  const solution=[...a],clues=[...a];
+  const idx=[...Array(31).keys()].sort(()=>Math.random()-.5);
+  let rev=31;
+  for(const i of idx){
+    if(rev<=clueCount)break;
+    const sv=clues[i];clues[i]=0;
+    if(countSolutions(clues,2)===1)rev--;else clues[i]=sv;
+  }
+  return{clues,solution};
+}
+
+// ── Hex geometry ─────────────────────────────────────────────────────────────
+const HR=26,HW=Math.sqrt(3)*HR,VS=HR*2*.75,MAX=6;
+const ROW_SIZES=[2,5,6,5,6,5,2];
+
+function cellCenter(ri,col){
+  const totalW=MAX*HW,rowW=ROW_SIZES[ri]*HW;
+  const xStart=(totalW-rowW)/2+HW/2;
+  return{x:xStart+col*HW,y:HR+ri*VS};
+}
+function hexPts(r){
+  return Array.from({length:6},(_,i)=>{const a=Math.PI/180*(60*i-30);return`${r*Math.cos(a)},${r*Math.sin(a)}`;}).join(' ');
+}
+const HPATH=`M ${hexPts(HR-1)} Z`;
+const HPATH_SMALL=`M ${hexPts(HR-2)} Z`;
+
+const CELL_POS=[];
+{let ci=0;for(let ri=0;ri<ROWS.length;ri++)for(let col=0;col<ROWS[ri].length;col++)CELL_POS[ci++]=cellCenter(ri,col);}
+
+const GW=MAX*HW+2,GH=ROWS.length*VS+HR+2,PAD=4;
+const SVG_W=GW+PAD*2,SVG_H=GH+PAD*2;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let puzzle=null,userVals=new Array(31).fill(0),selected=null;
+let errors=new Set(),showSolution=false,solved=false,clueCount=20;
+
+// ── SVG rendering ────────────────────────────────────────────────────────────
+const svgEl=document.getElementById('grid-svg');
+svgEl.setAttribute('width',SVG_W);
+svgEl.setAttribute('height',SVG_H);
+svgEl.setAttribute('viewBox',`0 0 ${SVG_W} ${SVG_H}`);
+
+const NS='http://www.w3.org/2000/svg';
+function svgEl2(tag,attrs){
+  const el=document.createElementNS(NS,tag);
+  for(const[k,v]of Object.entries(attrs))el.setAttribute(k,v);
+  return el;
+}
+
+let cellGroups=[];
+
+function buildGrid(){
+  svgEl.innerHTML='';
+  cellGroups=[];
+  const g=svgEl2('g',{transform:`translate(${PAD},${PAD})`});
+  svgEl.appendChild(g);
+  for(let ci=0;ci<31;ci++){
+    const{x,y}=CELL_POS[ci];
+    const grp=svgEl2('g',{transform:`translate(${x},${y})`});
+    grp.style.cursor='pointer';
+    const path=svgEl2('path',{d:HPATH,stroke:'#ccc4b4','stroke-width':'1'});
+    const txt=svgEl2('text',{'text-anchor':'middle','dominant-baseline':'central','font-size':'17','font-family':'Georgia,serif','style':'user-select:none'});
+    grp.appendChild(path);grp.appendChild(txt);
+    grp.addEventListener('click',()=>onCellClick(ci));
+    g.appendChild(grp);
+    cellGroups.push({grp,path,txt});
+  }
+}
+
+function renderGrid(){
+  if(!puzzle)return;
+  for(let ci=0;ci<31;ci++){
+    const{path,txt,grp}=cellGroups[ci];
+    const isClue=puzzle.clues[ci]!==0;
+    const isSel=selected===ci;
+    const isErr=errors.has(ci);
+    const isGray=GRAY.has(ci);
+    const val=showSolution?puzzle.solution[ci]:userVals[ci];
+    const isSolReveal=showSolution&&!isClue;
+
+    let fill=isGray?'#c8c8c8':'#f8f6f2';
+    if(isSel)fill='#d6e8ff';
+    if(isErr)fill='#ffd6d6';
+    if(isClue&&!isSel&&!isErr)fill=isGray?'#b0b0b0':'#ece8e0';
+
+    path.setAttribute('fill',fill);
+    path.setAttribute('stroke',isSel?'#4a90d9':isErr?'#cc2222':isClue?'#888':'#ccc4b4');
+    path.setAttribute('stroke-width',isSel||isErr?'2':'1');
+    grp.style.cursor=isClue?'default':'pointer';
+
+    if(val){
+      txt.textContent=val;
+      txt.setAttribute('font-weight',isClue?'bold':'600');
+      txt.setAttribute('font-size',isSolReveal?'14':'17');
+      txt.setAttribute('fill',isSolReveal?'#aaa':isClue?'#1a1a1a':'#2e7d32');
+    } else {
+      txt.textContent='';
+    }
+  }
+  updateNumpad();
+}
+
+function updateNumpad(){
+  document.querySelectorAll('.numpad button').forEach(b=>b.classList.toggle('active',selected!==null));
+}
+
+// ── Mini rosetta diagram ─────────────────────────────────────────────────────
+function buildMiniDiagram(){
+  const svg=document.querySelector('.rules-body svg');
+  if(!svg)return;
+  svg.innerHTML='';
+  const cells=[{x:35,y:36,gray:true,label:'3'},{x:35,y:16,gray:false,label:'1'},{x:52,y:26,gray:false,label:'5'},{x:52,y:46,gray:false,label:'4'},{x:35,y:56,gray:false,label:'6'},{x:18,y:46,gray:false,label:'7'},{x:18,y:26,gray:false,label:'2'}];
+  for(const{x,y,gray,label}of cells){
+    const r=11;
+    const pts=Array.from({length:6},(_,i)=>{const a=Math.PI/180*(60*i-30);return`${x+r*Math.cos(a)},${y+r*Math.sin(a)}`;}).join(' ');
+    const p=svgEl2('path',{d:`M ${pts} Z`,fill:gray?'#c0c0c0':'#f5f5f5',stroke:'#888','stroke-width':'1'});
+    const t=svgEl2('text',{x,y,'text-anchor':'middle','dominant-baseline':'central','font-size':'9','font-weight':gray?'bold':'normal','font-family':'Georgia,serif',fill:'#222'});
+    t.textContent=label;
+    svg.appendChild(p);svg.appendChild(t);
+  }
+}
+
+// ── Interactions ─────────────────────────────────────────────────────────────
+function onCellClick(ci){
+  if(!puzzle||puzzle.clues[ci]!==0)return;
+  selected=selected===ci?null:ci;
+  renderGrid();
+}
+
+function placeNumber(num){
+  if(selected===null||!puzzle||puzzle.clues[selected]!==0)return;
+  userVals[selected]=userVals[selected]===num?0:num;
+  selected=null;
+  // check errors
+  errors=new Set();
+  for(const s of SETS){
+    const seen={};
+    for(const c of s){const v=userVals[c];if(v){if(seen[v]!==undefined){errors.add(c);errors.add(seen[v]);}else seen[v]=c;}}
+  }
+  renderGrid();
+  // check solved
+  if(errors.size===0&&userVals.every((v,i)=>v===puzzle.solution[i])){
+    solved=true;
+    showWin();
+  }
+}
+
+function showWin(){
+  const wo=document.getElementById('win-overlay');
+  wo.style.display='flex';
+  document.getElementById('solved-banner').style.display='none';
+  setTimeout(()=>{
+    wo.style.display='none';
+    document.getElementById('solved-banner').style.display='block';
+  },2200);
+}
+
+function toggleRules(){
+  const body=document.getElementById('rules-body');
+  const arrow=document.getElementById('rules-arrow');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  arrow.textContent=open?'▲':'▼';
+  if(open)buildMiniDiagram();
+}
+
+function toggleSolution(){
+  showSolution=!showSolution;
+  const btn=document.getElementById('btn-solution');
+  btn.textContent=showSolution?'Hide Solution':'Reveal Solution';
+  btn.classList.toggle('active',showSolution);
+  renderGrid();
+}
+
+function resetPuzzle(){
+  if(!puzzle)return;
+  userVals=[...puzzle.clues];
+  errors=new Set();solved=false;showSolution=false;selected=null;
+  document.getElementById('btn-solution').textContent='Reveal Solution';
+  document.getElementById('btn-solution').classList.remove('active');
+  document.getElementById('solved-banner').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('status').textContent=`${puzzle.clues.filter(v=>v!==0).length} clues`;
+  renderGrid();
+}
+
+function onDiffChange(val){
+  clueCount=+val;
+  document.getElementById('clue-count').textContent=`${val} clues`;
+  const info=diffInfo(clueCount);
+  document.getElementById('diff-label').textContent=info.label;
+  document.getElementById('diff-label').style.color=info.color;
+}
+
+function diffInfo(n){
+  if(n>=26)return{label:'Beginner',color:'#27ae60'};
+  if(n>=22)return{label:'Easy',color:'#2ecc71'};
+  if(n>=18)return{label:'Medium',color:'#f39c12'};
+  if(n>=14)return{label:'Hard',color:'#e67e22'};
+  return{label:'Expert',color:'#e74c3c'};
+}
+
+function generate(){
+  document.getElementById('gen-overlay').style.display='flex';
+  document.getElementById('solved-banner').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('status').textContent='';
+  solved=false;showSolution=false;selected=null;errors=new Set();
+  document.getElementById('btn-solution').textContent='Reveal Solution';
+  document.getElementById('btn-solution').classList.remove('active');
+  setTimeout(()=>{
+    puzzle=generatePuzzle(clueCount);
+    userVals=[...puzzle.clues];
+    renderGrid();
+    document.getElementById('gen-overlay').style.display='none';
+    document.getElementById('status').textContent=`${puzzle.clues.filter(v=>v!==0).length} clues`;
+  },40);
+}
+
+document.addEventListener('keydown',e=>{
+  const n=parseInt(e.key);
+  if(n>=1&&n<=7)placeNumber(n);
+  if(e.key==='Backspace'||e.key==='Delete')placeNumber(0);
+  if(e.key==='Escape'){selected=null;renderGrid();}
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildGrid();
+onDiffChange(20);
+generate();
+</script>
+</body>
+</html>
