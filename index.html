@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Rosetta">
 <title>Rosetta</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:#f5f0e8;font-family:Georgia,'Times New Roman',serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px 16px 40px;}
@@ -847,6 +850,13 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Backspace'||e.key==='Delete')placeNumber(0);
   if(e.key==='Escape'){selected=null;renderGrid();}
 });
+
+// ── PWA service worker registration ──────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 buildGrid();
