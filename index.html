@@ -25,13 +25,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 .diff-ends{display:flex;justify-content:space-between;font-size:11px;color:#aaa;margin-top:3px;font-family:sans-serif;}
 .grid-wrap{position:relative;background:#fff;border-radius:16px;padding:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #e0d8cc;margin-bottom:14px;}
 .overlay{position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-/* numpad row: numbers + pencil toggle */
 .numpad-row{display:flex;gap:6px;margin-bottom:8px;justify-content:center;align-items:center;}
 .numpad-row button{width:40px;height:40px;border-radius:50%;font-size:17px;font-weight:700;font-family:Georgia,serif;cursor:pointer;transition:all .12s;border:1px solid #ddd4c4;background:#f5f0e8;color:#bbb;}
 .numpad-row button.active{background:#fff;border:2px solid #66bb6a;color:#2e7d32;}
-.numpad-row button.note-active{background:#fff;border:2px solid #66bb6a;color:#2e7d32;}
 .clr{font-size:13px!important;font-family:sans-serif!important;}
-/* pencil button */
 .btn-pencil{width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;transition:all .12s;border:1px solid #ddd4c4;background:#f5f0e8;color:#aaa;display:flex;align-items:center;justify-content:center;}
 .btn-pencil.on{background:#fff8e1;border:2px solid #f0a500;color:#c47f00;}
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
@@ -41,12 +38,29 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 .status{font-size:12px;color:#999;margin-bottom:10px;font-family:sans-serif;text-align:center;}
 .solved-banner{background:#eafaf1;border:1px solid #a9dfbf;border-radius:10px;padding:8px 20px;font-size:14px;color:#1e8449;font-family:sans-serif;margin-bottom:12px;font-weight:600;}
 .rules-diagram{display:flex;gap:12px;align-items:flex-start;}
+.section-divider{margin-top:12px;border-top:1px solid #f0e8dc;padding-top:12px;}
+.section-title{font-size:12px;color:#555;font-family:sans-serif;font-weight:600;margin-bottom:6px;}
+.section-hint{font-size:11px;color:#888;font-family:sans-serif;margin-bottom:8px;}
+.input-row{display:flex;gap:6px;align-items:center;}
+.load-input{flex:1;padding:7px 10px;border:1px solid #ddd4c4;border-radius:8px;font-size:13px;font-family:Georgia,serif;background:#faf8f4;color:#333;outline:none;}
+.small-btn{padding:7px 14px;border-radius:8px;background:#2c2c2c;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;white-space:nowrap;}
+.err-msg{font-size:11px;color:#c0392b;font-family:sans-serif;margin-top:5px;display:none;}
+.ok-msg{font-size:11px;font-family:sans-serif;margin-top:5px;display:none;}
+/* toggle switch */
+.toggle-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
+.toggle-row span{font-size:12px;color:#555;font-family:sans-serif;}
+.toggle-switch{position:relative;width:38px;height:22px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-track{position:absolute;inset:0;background:#ccc;border-radius:11px;cursor:pointer;transition:.2s;}
+.toggle-switch input:checked+.toggle-track{background:#2e7d32;}
+.toggle-track:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+.toggle-switch input:checked+.toggle-track:before{transform:translateX(16px);}
 </style>
 </head>
 <body>
 <h1>ROSETTA</h1>
 
-<!-- Rules -->
+<!-- Rules / Options -->
 <div class="card">
   <button class="rules-toggle" onclick="toggleRules()">
     <span>How to play</span><span id="rules-arrow">▼</span>
@@ -60,33 +74,68 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <li>No number is repeated in a horizontal row</li>
       <li>Each number 1–7 appears exactly once across all 7 grey cells</li>
     </ol>
-    <div style="margin-top:12px;border-top:1px solid #f0e8dc;padding-top:12px;">
-      <div style="font-size:12px;color:#555;font-family:sans-serif;font-weight:600;margin-bottom:6px;">Load a puzzle</div>
-      <div style="font-size:11px;color:#888;font-family:sans-serif;margin-bottom:8px;">Enter a 31-character string — digits 1–7 for clues, period for empty cells.</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input id="load-input" type="text" maxlength="62" placeholder="e.g. 1.3..2.....7....." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-          style="flex:1;padding:7px 10px;border:1px solid #ddd4c4;border-radius:8px;font-size:13px;font-family:Georgia,serif;background:#faf8f4;color:#333;outline:none;"
-          onkeydown="if(event.key==='Enter')loadPuzzle()">
-        <button onclick="loadPuzzle()"
-          style="padding:7px 14px;border-radius:8px;background:#2c2c2c;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;white-space:nowrap;">
-          Load
-        </button>
-      </div>
-      <div id="load-error" style="font-size:11px;color:#c0392b;font-family:sans-serif;margin-top:5px;display:none;"></div>
+
+    <!-- Human-solvable toggle -->
+    <div class="toggle-row">
+      <span>Human-solvable only<br><span style="font-size:10px;color:#aaa;">No guessing required (slower)</span></span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="human-solvable-toggle" checked onchange="humanSolvableMode=this.checked">
+        <div class="toggle-track"></div>
+      </label>
     </div>
-    <div style="margin-top:12px;border-top:1px solid #f0e8dc;padding-top:12px;">
-      <div style="font-size:12px;color:#555;font-family:sans-serif;font-weight:600;margin-bottom:6px;">Export current puzzle</div>
-      <div style="font-size:11px;color:#888;font-family:sans-serif;margin-bottom:8px;">Copy this string to share or save the current puzzle clues.</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input id="export-output" type="text" readonly placeholder="Generate a puzzle first…"
-          style="flex:1;padding:7px 10px;border:1px solid #ddd4c4;border-radius:8px;font-size:13px;font-family:Georgia,serif;background:#f0ede8;color:#555;outline:none;cursor:default;"
-          onclick="this.select()">
-        <button onclick="exportPuzzle()"
-          style="padding:7px 14px;border-radius:8px;background:#2c2c2c;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:sans-serif;white-space:nowrap;">
-          Copy
-        </button>
+
+    <!-- Load puzzle (clue string) -->
+    <div class="section-divider">
+      <div class="section-title">Load a puzzle — clue string</div>
+      <div class="section-hint">31 characters: digits 1–7 for clues, period for empty. Ellipses expanded automatically.</div>
+      <div class="input-row">
+        <input id="load-input" type="text" maxlength="62" class="load-input"
+          placeholder="e.g. 1.3..2.....7....."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          onkeydown="if(event.key==='Enter')loadPuzzle()">
+        <button class="small-btn" onclick="loadPuzzle()">Load</button>
       </div>
-      <div id="export-msg" style="font-size:11px;color:#27ae60;font-family:sans-serif;margin-top:5px;display:none;"></div>
+      <div id="load-error" class="err-msg"></div>
+    </div>
+
+    <!-- Load puzzle (bracket/notes format) -->
+    <div class="section-divider">
+      <div class="section-title">Load a puzzle — with notes</div>
+      <div class="section-hint">31 bracket cells: [1] confirmed, [137] notes, [] empty. e.g. [1][4][156][]…</div>
+      <div class="input-row">
+        <input id="notes-input" type="text" class="load-input"
+          placeholder="[1][4][156][][356]…"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          onkeydown="if(event.key==='Enter')loadNotes()">
+        <button class="small-btn" onclick="loadNotes()">Load</button>
+      </div>
+      <div id="notes-error" class="err-msg"></div>
+    </div>
+
+    <!-- Export -->
+    <div class="section-divider">
+      <div class="section-title">Export current puzzle</div>
+      <div class="section-hint">Copy this string to share or save the current puzzle clues.</div>
+      <div class="input-row">
+        <input id="export-output" type="text" readonly class="load-input"
+          placeholder="Generate a puzzle first…"
+          style="background:#f0ede8;color:#555;cursor:default;" onclick="this.select()">
+        <button class="small-btn" onclick="exportPuzzle()">Copy</button>
+      </div>
+      <div id="export-msg" class="ok-msg"></div>
+    </div>
+
+    <!-- Export with notes -->
+    <div class="section-divider">
+      <div class="section-title">Export with notes</div>
+      <div class="section-hint">Includes your pencil marks. Load back via "Load a puzzle — with notes".</div>
+      <div class="input-row">
+        <input id="export-notes-output" type="text" readonly class="load-input"
+          placeholder="Generate a puzzle first…"
+          style="background:#f0ede8;color:#555;cursor:default;" onclick="this.select()">
+        <button class="small-btn" onclick="exportWithNotes()">Copy</button>
+      </div>
+      <div id="export-notes-msg" class="ok-msg"></div>
     </div>
   </div>
 </div>
@@ -97,15 +146,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <span class="diff-label">Difficulty</span>
     <span class="diff-value" id="diff-label">Medium</span>
   </div>
-  <input type="range" id="diff-slider" min="8" max="30" value="20" oninput="onDiffChange(this.value)">
-  <div class="diff-ends"><span>Expert</span><span id="clue-count">20 clues</span><span>Beginner</span></div>
+  <input type="range" id="diff-slider" min="6" max="30" value="20" oninput="onDiffChange(this.value)">
+  <div class="diff-ends"><span>Diabolical</span><span id="clue-count">20 clues</span><span>Beginner</span></div>
 </div>
 
 <!-- Grid -->
 <div class="grid-wrap">
   <svg id="grid-svg" style="display:block;touch-action:manipulation"></svg>
-  <div class="overlay" id="gen-overlay" style="display:none;background:rgba(255,255,255,.8)">
-    <span style="font-size:14px;color:#888;font-family:sans-serif">Generating…</span>
+  <div class="overlay" id="gen-overlay" style="display:none;background:rgba(255,255,255,.85)">
+    <span style="font-size:14px;color:#888;font-family:sans-serif" id="gen-msg">Generating…</span>
   </div>
   <div class="overlay" id="win-overlay" style="display:none;background:rgba(255,255,255,.93)">
     <div style="font-size:48px">🎉</div>
@@ -116,7 +165,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <div id="solved-banner" class="solved-banner" style="display:none">✓ Puzzle complete!</div>
 <div id="status" class="status"></div>
 
-<!-- Number pad + pencil -->
+<!-- Number pad -->
 <div class="numpad-row" id="numpad">
   <button onclick="placeNumber(1)">1</button>
   <button onclick="placeNumber(2)">2</button>
@@ -145,11 +194,14 @@ const SETS=[
   [0,1],[2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17],
   [18,19,20,21,22,23],[24,25,26,27,28],[29,30],
 ];
-const ROWS=[[0,1],[2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17],[18,19,20,21,22,23],[24,25,26,27,28],[29,30]];
+const ROWS=[[0,1],[2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17],
+            [18,19,20,21,22,23],[24,25,26,27,28],[29,30]];
 const GRAY=new Set([4,8,11,15,19,22,26]);
 const CELL_SETS=Array.from({length:31},(_,i)=>SETS.reduce((a,s,si)=>(s.includes(i)?[...a,si]:a),[]));
+const ROW_OF={};
+ROWS.forEach((r,ri)=>r.forEach(c=>ROW_OF[c]=ri));
 
-// ── Solver ────────────────────────────────────────────────────────────────────
+// ── Backtracking solver ───────────────────────────────────────────────────────
 function countSolutions(clues,limit=2){
   let count=0;
   const a=[...clues],u=new Array(15).fill(0);
@@ -157,7 +209,7 @@ function countSolutions(clues,limit=2){
   function bt(c){
     if(count>=limit)return;
     if(c===31){count++;return;}
-    if(a[c]!==0){bt(c+1);return;}
+    if(a[c]){bt(c+1);return;}
     for(let v=1;v<=7;v++){
       if(count>=limit)return;
       const b=1<<v;let ok=true;
@@ -168,7 +220,158 @@ function countSolutions(clues,limit=2){
   bt(0);return count;
 }
 
-function generatePuzzle(clueCount){
+// ── Human logic solver ────────────────────────────────────────────────────────
+// Returns true if puzzle can be fully solved by pure logic (no bifurcation).
+// Only uses techniques valid for this puzzle's constraint structure:
+//   - Naked singles
+//   - Hidden singles within Rosettas (sets 0-7, all require all 7 digits)
+//   - Naked pairs/triples within Rosettas
+//   - Hidden pairs within Rosettas
+//   - Pointing pairs: Rosetta digit confined to one row → eliminate from rest of row
+function isHumanSolvable(clues){
+  // Work with candidate sets
+  const cands=Array.from({length:31},(_,i)=>{
+    if(clues[i]) return new Set([clues[i]]);
+    const used=new Set();
+    for(const si of CELL_SETS[i]) for(const c of SETS[si]) if(clues[c]) used.add(clues[c]);
+    return new Set([1,2,3,4,5,6,7].filter(v=>!used.has(v)));
+  });
+
+  let progress=true;
+  while(progress){
+    progress=false;
+
+    // Naked singles — only propagate cells that are newly confirmed (size 1)
+    for(let c=0;c<31;c++){
+      if(cands[c].size!==1) continue;
+      const v=[...cands[c]][0];
+      for(const si of CELL_SETS[c]){
+        for(const peer of SETS[si]){
+          if(peer!==c && cands[peer].has(v) && cands[peer].size>1){
+            cands[peer].delete(v);
+            if(cands[peer].size===0) return false;
+            progress=true;
+          }
+        }
+      }
+    }
+
+    // Techniques valid only for Rosettas (sets 0-7, full 7-cell groups)
+    for(let si=0;si<8;si++){
+      const grp=SETS[si];
+
+      // Hidden singles — only look at unconfirmed cells
+      for(let d=1;d<=7;d++){
+        const places=grp.filter(c=>cands[c].has(d));
+        if(places.length===0) return false;
+        if(places.length===1){
+          const c=places[0];
+          if(cands[c].size>1){
+            for(let v=1;v<=7;v++) if(v!==d && cands[c].has(v)){ cands[c].delete(v); progress=true; }
+          }
+        }
+      }
+
+      // Pointing pairs
+      for(let d=1;d<=7;d++){
+        const places=grp.filter(c=>cands[c].has(d)&&cands[c].size>1);
+        if(places.length>=2){
+          const rows=new Set(places.map(c=>ROW_OF[c]));
+          if(rows.size===1){
+            const ri=[...rows][0];
+            for(const c of ROWS[ri]){
+              if(!grp.includes(c)&&cands[c].has(d)&&cands[c].size>1){
+                cands[c].delete(d);
+                if(cands[c].size===0) return false;
+                progress=true;
+              }
+            }
+          }
+        }
+      }
+
+      // Naked pairs
+      const multi=grp.filter(c=>cands[c].size>1);
+      for(let i=0;i<multi.length;i++){
+        for(let j=i+1;j<multi.length;j++){
+          const ci=multi[i],cj=multi[j];
+          if(cands[ci].size===2&&setsEqual(cands[ci],cands[cj])){
+            const pair=[...cands[ci]];
+            for(const c of multi){
+              if(c!==ci&&c!==cj){
+                for(const d of pair){
+                  if(cands[c].has(d)){
+                    cands[c].delete(d);
+                    if(cands[c].size===0) return false;
+                    progress=true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Hidden pairs
+      for(let d1=1;d1<=7;d1++){
+        for(let d2=d1+1;d2<=7;d2++){
+          const p1=multi.filter(c=>cands[c].has(d1));
+          const p2=multi.filter(c=>cands[c].has(d2));
+          if(p1.length===2&&arraysEqual(p1,p2)){
+            for(const c of p1){
+              for(let v=1;v<=7;v++){
+                if(v!==d1&&v!==d2&&cands[c].has(v)){
+                  cands[c].delete(v);
+                  if(cands[c].size===0) return false;
+                  progress=true;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Naked triples
+      for(let i=0;i<multi.length;i++){
+        for(let j=i+1;j<multi.length;j++){
+          for(let k=j+1;k<multi.length;k++){
+            const ci=multi[i],cj=multi[j],ck=multi[k];
+            const union=new Set([...cands[ci],...cands[cj],...cands[ck]]);
+            if(union.size===3){
+              for(const c of multi){
+                if(c!==ci&&c!==cj&&c!==ck){
+                  for(const d of union){
+                    if(cands[c].has(d)){
+                      cands[c].delete(d);
+                      if(cands[c].size===0) return false;
+                      progress=true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return cands.every(s=>s.size===1);
+}
+
+function setsEqual(a,b){
+  if(a.size!==b.size) return false;
+  for(const v of a) if(!b.has(v)) return false;
+  return true;
+}
+function arraysEqual(a,b){
+  return a.length===b.length&&a.every((v,i)=>v===b[i]);
+}
+
+// ── Puzzle generation ─────────────────────────────────────────────────────────
+let humanSolvableMode=true;
+
+function randomSolution(){
   const u=new Array(15).fill(0),a=new Array(31).fill(0);
   function rnd(c){
     if(c===31)return true;
@@ -180,16 +383,48 @@ function generatePuzzle(clueCount){
     }
     return false;
   }
-  rnd(0);
-  const solution=[...a],clues=[...a];
+  rnd(0);return a.slice();
+}
+
+function stripToMinimum(solution, targetCount){
+  const clues=solution.slice();
   const idx=[...Array(31).keys()].sort(()=>Math.random()-.5);
-  let rev=31;
   for(const i of idx){
-    if(rev<=clueCount)break;
+    if(clues.filter(v=>v).length <= targetCount) break; // stop at target
     const sv=clues[i];clues[i]=0;
-    if(countSolutions(clues,2)===1)rev--;else clues[i]=sv;
+    if(countSolutions(clues,2)!==1) clues[i]=sv;
   }
-  return{clues,solution};
+  return clues;
+}
+
+function generatePuzzle(targetCount){
+  const tolerance=targetCount<=8?0:2;
+  const maxAttempts=humanSolvableMode?(targetCount<=8?200:80):(targetCount<=8?60:20);
+  let bestClues=null,bestN=31;
+
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    const solution=randomSolution();
+    const clues=stripToMinimum(solution,targetCount);
+    const n=clues.filter(v=>v).length;
+
+    // In human-solvable mode, reject puzzles requiring bifurcation
+    if(humanSolvableMode && !isHumanSolvable(clues)) continue;
+
+    if(n<bestN){bestN=n;bestClues={clues,solution};}
+    if(n<=targetCount+tolerance) break;
+  }
+
+  // Fallback: if human-solvable mode found nothing, return best non-human-solvable
+  if(!bestClues){
+    for(let attempt=0;attempt<30;attempt++){
+      const solution=randomSolution();
+      const clues=stripToMinimum(solution,targetCount);
+      const n=clues.filter(v=>v).length;
+      if(n<bestN){bestN=n;bestClues={clues,solution,requiresBifurcation:true};}
+      if(n<=targetCount+tolerance) break;
+    }
+  }
+  return bestClues;
 }
 
 // ── Hex geometry ──────────────────────────────────────────────────────────────
@@ -197,7 +432,7 @@ const HR=26,HW=Math.sqrt(3)*HR,VS=HR*2*.75,MAX=6;
 const ROW_SIZES=[2,5,6,5,6,5,2];
 function cellCenter(ri,col){
   const totalW=MAX*HW,rowW=ROW_SIZES[ri]*HW;
-  return{x:(totalW-rowW)/2+HW/2+col*HW, y:HR+ri*VS};
+  return{x:(totalW-rowW)/2+HW/2+col*HW,y:HR+ri*VS};
 }
 function hexPts(r){
   return Array.from({length:6},(_,i)=>{const a=Math.PI/180*(60*i-30);return`${r*Math.cos(a)},${r*Math.sin(a)}`;}).join(' ');
@@ -208,19 +443,16 @@ const CELL_POS=[];
 const GW=MAX*HW+2,GH=ROWS.length*VS+HR+2,PAD=4;
 const SVG_W=GW+PAD*2,SVG_H=GH+PAD*2;
 
-// Note positions: 7 digits arranged in a 3-2-2 pattern inside the hex
-// Offsets relative to cell centre (small, so they fit inside the hexagon)
 const NOTE_POS=[
-  // digits 1-7 mapped to positions
-  {x:-14,y:-10},{x:0,y:-10},{x:14,y:-10},  // 1 2 3  (top row)
-  {x:-7,y:1},{x:7,y:1},                      // 4 5    (middle row)
-  {x:-7,y:12},{x:7,y:12},                    // 6 7    (bottom row)
+  {x:-14,y:-10},{x:0,y:-10},{x:14,y:-10},
+  {x:-7,y:1},{x:7,y:1},
+  {x:-7,y:12},{x:7,y:12},
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let puzzle=null;
-let userVals=new Array(31).fill(0);       // confirmed digit per cell (0=empty)
-let notes=Array.from({length:31},()=>new Set()); // pencil marks per cell
+let userVals=new Array(31).fill(0);
+let notes=Array.from({length:31},()=>new Set());
 let selected=null;
 let errors=new Set();
 let showSolution=false;
@@ -228,22 +460,18 @@ let solved=false;
 let clueCount=20;
 let noteMode=false;
 
-// ── SVG helpers ───────────────────────────────────────────────────────────────
+// ── SVG ───────────────────────────────────────────────────────────────────────
 const NS='http://www.w3.org/2000/svg';
 function el(tag,attrs){
   const e=document.createElementNS(NS,tag);
   for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);
   return e;
 }
-
 const svgEl=document.getElementById('grid-svg');
-svgEl.setAttribute('width',SVG_W);
-svgEl.setAttribute('height',SVG_H);
+svgEl.setAttribute('width',SVG_W);svgEl.setAttribute('height',SVG_H);
 svgEl.setAttribute('viewBox',`0 0 ${SVG_W} ${SVG_H}`);
 
-// Each cell group holds: path, one big text, and 7 small note texts
 let cellGroups=[];
-
 function buildGrid(){
   svgEl.innerHTML='';cellGroups=[];
   const g=el('g',{transform:`translate(${PAD},${PAD})`});
@@ -253,21 +481,12 @@ function buildGrid(){
     const grp=el('g',{transform:`translate(${x},${y})`});
     grp.style.cursor='pointer';
     const path=el('path',{d:HPATH,stroke:'#ccc4b4','stroke-width':'1'});
-    // Big digit text
     const txt=el('text',{'text-anchor':'middle','dominant-baseline':'central','font-size':'17','font-family':'Georgia,serif','style':'user-select:none'});
-    // 7 small note texts, one per digit 1-7
-    const noteTexts=NOTE_POS.map((pos,ni)=>{
-      const t=el('text',{
-        x:pos.x, y:pos.y,
-        'text-anchor':'middle','dominant-baseline':'central',
-        'font-size':'7.5','font-family':'Georgia,serif',
-        'style':'user-select:none',fill:'#888'
-      });
-      t.textContent='';
-      return t;
+    const noteTexts=NOTE_POS.map(pos=>{
+      const t=el('text',{x:pos.x,y:pos.y,'text-anchor':'middle','dominant-baseline':'central','font-size':'7.5','font-family':'Georgia,serif','style':'user-select:none',fill:'#888'});
+      t.textContent='';return t;
     });
-    grp.appendChild(path);
-    grp.appendChild(txt);
+    grp.appendChild(path);grp.appendChild(txt);
     noteTexts.forEach(t=>grp.appendChild(t));
     grp.addEventListener('click',()=>onCellClick(ci));
     g.appendChild(grp);
@@ -286,38 +505,28 @@ function renderGrid(){
     const val=showSolution?puzzle.solution[ci]:userVals[ci];
     const isSolReveal=showSolution&&!isClue;
     const cellNotes=notes[ci];
-
     let fill=isGray?'#c8c8c8':'#f8f6f2';
     if(isSel)fill='#d6e8ff';
     if(isErr)fill='#ffd6d6';
     if(isClue&&!isSel&&!isErr)fill=isGray?'#b0b0b0':'#ece8e0';
-
     path.setAttribute('fill',fill);
     path.setAttribute('stroke',isSel?'#4a90d9':isErr?'#cc2222':isClue?'#888':'#ccc4b4');
     path.setAttribute('stroke-width',isSel||isErr?'2':'1');
     grp.style.cursor=isClue?'default':'pointer';
-
-    // Show big digit if: it's a clue, user placed a digit, or solution revealed
-    const showBig = val !== 0;
+    const showBig=val!==0;
     if(showBig){
       txt.textContent=val;
       txt.setAttribute('font-weight',isClue?'bold':'600');
       txt.setAttribute('font-size',isSolReveal?'14':'17');
       txt.setAttribute('fill',isSolReveal?'#aaa':isClue?'#1a1a1a':'#2e7d32');
-    } else {
-      txt.textContent='';
-    }
-
-    // Show note digits only when: no big digit placed, not a clue, not showing solution
-    const showNotes = !showBig && !isClue && !showSolution;
+    } else {txt.textContent='';}
+    const showNotes=!showBig&&!isClue&&!showSolution;
     for(let ni=0;ni<7;ni++){
       const digit=ni+1;
-      if(showNotes && cellNotes.has(digit)){
+      if(showNotes&&cellNotes.has(digit)){
         noteTexts[ni].textContent=digit;
         noteTexts[ni].setAttribute('fill',isErr?'#cc6666':'#7a9a7a');
-      } else {
-        noteTexts[ni].textContent='';
-      }
+      } else {noteTexts[ni].textContent='';}
     }
   }
   updateNumpad();
@@ -326,28 +535,6 @@ function renderGrid(){
 function updateNumpad(){
   const active=selected!==null;
   document.querySelectorAll('.numpad-row button:not(.btn-pencil)').forEach(b=>b.classList.toggle('active',active));
-}
-
-// ── Note mode toggle ──────────────────────────────────────────────────────────
-function toggleNoteMode(){
-  noteMode=!noteMode;
-  const btn=document.getElementById('btn-pencil');
-  btn.classList.toggle('on',noteMode);
-}
-
-// ── Mini rosetta diagram ──────────────────────────────────────────────────────
-function buildMiniDiagram(){
-  const svg=document.querySelector('.rules-body svg');
-  if(!svg||svg.children.length>0)return;
-  const cells=[{x:35,y:36,gray:true,label:'3'},{x:35,y:16,gray:false,label:'1'},{x:52,y:26,gray:false,label:'5'},{x:52,y:46,gray:false,label:'4'},{x:35,y:56,gray:false,label:'6'},{x:18,y:46,gray:false,label:'7'},{x:18,y:26,gray:false,label:'2'}];
-  for(const{x,y,gray,label}of cells){
-    const r=11;
-    const pts=Array.from({length:6},(_,i)=>{const a=Math.PI/180*(60*i-30);return`${x+r*Math.cos(a)},${y+r*Math.sin(a)}`;}).join(' ');
-    const p=el('path',{d:`M ${pts} Z`,fill:gray?'#c0c0c0':'#f5f5f5',stroke:'#888','stroke-width':'1'});
-    const t=el('text',{x,y,'text-anchor':'middle','dominant-baseline':'central','font-size':'9','font-weight':gray?'bold':'normal','font-family':'Georgia,serif',fill:'#222'});
-    t.textContent=label;
-    svg.appendChild(p);svg.appendChild(t);
-  }
 }
 
 // ── Interactions ──────────────────────────────────────────────────────────────
@@ -359,40 +546,30 @@ function onCellClick(ci){
 
 function placeNumber(num){
   if(selected===null||!puzzle||puzzle.clues[selected]!==0)return;
-
-  if(noteMode && num!==0){
-    // Toggle this digit in the cell's notes; clear the confirmed value if any
+  if(noteMode&&num!==0){
     userVals[selected]=0;
-    if(notes[selected].has(num)) notes[selected].delete(num);
+    if(notes[selected].has(num))notes[selected].delete(num);
     else notes[selected].add(num);
-    // Don't deselect in note mode — lets user add multiple notes quickly
   } else {
-    // Normal mode: place (or toggle off) a confirmed digit, wipe notes for this cell
-    if(num===0){
-      userVals[selected]=0;
-      notes[selected]=new Set();
-    } else {
-      userVals[selected]=userVals[selected]===num?0:num;
-      if(userVals[selected]!==0) notes[selected]=new Set(); // clear notes when digit placed
-    }
+    if(num===0){userVals[selected]=0;notes[selected]=new Set();}
+    else{userVals[selected]=userVals[selected]===num?0:num;if(userVals[selected]!==0)notes[selected]=new Set();}
     selected=null;
   }
-
-  // Recheck errors (only against confirmed values)
   errors=new Set();
   for(const s of SETS){
     const seen={};
-    for(const c of s){
-      const v=userVals[c];
-      if(v){if(seen[v]!==undefined){errors.add(c);errors.add(seen[v]);}else seen[v]=c;}
-    }
+    for(const c of s){const v=userVals[c];if(v){if(seen[v]!==undefined){errors.add(c);errors.add(seen[v]);}else seen[v]=c;}}
   }
   renderGrid();
-
-  // Check solved
-  if(!noteMode && errors.size===0&&userVals.every((v,i)=>v===puzzle.solution[i])){
+  updateExportField();
+  if(!noteMode&&errors.size===0&&userVals.every((v,i)=>v===puzzle.solution[i])){
     solved=true;showWin();
   }
+}
+
+function toggleNoteMode(){
+  noteMode=!noteMode;
+  document.getElementById('btn-pencil').classList.toggle('on',noteMode);
 }
 
 function showWin(){
@@ -408,6 +585,19 @@ function toggleRules(){
   body.style.display=open?'block':'none';
   arrow.textContent=open?'▲':'▼';
   if(open)buildMiniDiagram();
+}
+
+function buildMiniDiagram(){
+  const svg=document.querySelector('.rules-body svg');
+  if(!svg||svg.children.length>0)return;
+  const cells=[{x:35,y:36,gray:true,label:'3'},{x:35,y:16,gray:false,label:'1'},{x:52,y:26,gray:false,label:'5'},{x:52,y:46,gray:false,label:'4'},{x:35,y:56,gray:false,label:'6'},{x:18,y:46,gray:false,label:'7'},{x:18,y:26,gray:false,label:'2'}];
+  for(const{x,y,gray,label}of cells){
+    const r=11;
+    const pts=Array.from({length:6},(_,i)=>{const a=Math.PI/180*(60*i-30);return`${x+r*Math.cos(a)},${y+r*Math.sin(a)}`;}).join(' ');
+    const p=el('path',{d:`M ${pts} Z`,fill:gray?'#c0c0c0':'#f5f5f5',stroke:'#888','stroke-width':'1'});
+    const t=el('text',{x,y,'text-anchor':'middle','dominant-baseline':'central','font-size':'9','font-weight':gray?'bold':'normal','font-family':'Georgia,serif',fill:'#222'});
+    t.textContent=label;svg.appendChild(p);svg.appendChild(t);
+  }
 }
 
 function toggleSolution(){
@@ -445,11 +635,13 @@ function diffInfo(n){
   if(n>=22)return{label:'Easy',color:'#2ecc71'};
   if(n>=18)return{label:'Medium',color:'#f39c12'};
   if(n>=14)return{label:'Hard',color:'#e67e22'};
-  return{label:'Expert',color:'#e74c3c'};
+  if(n>=8) return{label:'Expert',color:'#e74c3c'};
+  return        {label:'Diabolical',color:'#9b1fcc'};
 }
 
 function generate(){
   document.getElementById('gen-overlay').style.display='flex';
+  document.getElementById('gen-msg').textContent=humanSolvableMode?'Generating (logic-only)…':'Generating…';
   document.getElementById('solved-banner').style.display='none';
   document.getElementById('win-overlay').style.display='none';
   document.getElementById('status').textContent='';
@@ -462,10 +654,190 @@ function generate(){
     puzzle=generatePuzzle(clueCount);
     userVals=[...puzzle.clues];
     renderGrid();
+    const n=puzzle.clues.filter(v=>v!==0).length;
     document.getElementById('gen-overlay').style.display='none';
-    document.getElementById('status').textContent=`${puzzle.clues.filter(v=>v!==0).length} clues`;
+    let msg=n<=clueCount?`${n} clues`:`${n} clues (best found)`;
+    if(puzzle.requiresBifurcation) msg+=' ⚠ requires guessing';
+    document.getElementById('status').textContent=msg;
     updateExportField();
   },40);
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportPuzzle(){
+  if(!puzzle)return;
+  const str=puzzle.clues.map(v=>v===0?'.':v).join('');
+  const field=document.getElementById('export-output');
+  field.value=str;
+  const msg=document.getElementById('export-msg');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(()=>{
+      msg.textContent='Copied to clipboard!';msg.style.color='#27ae60';msg.style.display='block';
+      setTimeout(()=>msg.style.display='none',2500);
+    }).catch(()=>{field.select();msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';});
+  } else {field.select();msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';}
+}
+
+function exportWithNotes(){
+  if(!puzzle) return;
+  // Build bracket string: clue=[digit], user value=[digit], notes=[digits], empty=[]
+  const str = Array.from({length:31},(_,i)=>{
+    if(puzzle.clues[i]) return `[${puzzle.clues[i]}]`;   // given clue
+    if(userVals[i])     return `[${userVals[i]}]`;       // user confirmed value
+    if(notes[i].size>1)   return `[${[...notes[i]].sort().join('')}]`; // pencil marks (2+ only)
+    return '[]';                                          // empty
+  }).join('');
+  const field=document.getElementById('export-notes-output');
+  field.value=str;
+  const msg=document.getElementById('export-notes-msg');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(()=>{
+      msg.textContent='Copied to clipboard!';msg.style.color='#27ae60';msg.style.display='block';
+      setTimeout(()=>msg.style.display='none',2500);
+    }).catch(()=>{field.select();msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';});
+  } else {field.select();msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';}
+}
+
+function updateExportField(){
+  if(!puzzle) return;
+  const f=document.getElementById('export-output');
+  if(f) f.value=puzzle.clues.map(v=>v===0?'.':v).join('');
+  const fn=document.getElementById('export-notes-output');
+  if(fn) fn.value=Array.from({length:31},(_,i)=>{
+    if(puzzle.clues[i]) return `[${puzzle.clues[i]}]`;
+    if(userVals[i])     return `[${userVals[i]}]`;
+    if(notes[i].size>1)   return `[${[...notes[i]].sort().join('')}]`;
+    return '[]';
+  }).join('');
+}
+
+// ── Load clue string ──────────────────────────────────────────────────────────
+function loadPuzzle(){
+  const errEl=document.getElementById('load-error');
+  errEl.style.display='none';
+  const raw=document.getElementById('load-input').value.trim()
+    .replace(/\u2026/g,'...');
+  if(raw.length!==31){errEl.textContent=`String must be exactly 31 characters (got ${raw.length}).`;errEl.style.display='block';return;}
+  if(!/^[1-7.]+$/.test(raw)){errEl.textContent='Only digits 1–7 and periods (.) are allowed.';errEl.style.display='block';return;}
+  const clues=raw.split('').map(c=>c==='.'?0:parseInt(c));
+  const result=solveClues(clues,errEl);
+  if(!result)return;
+  applyLoadedPuzzle(result.clues,result.solution,'load-input',`Loaded — ${clues.filter(v=>v).length} clues`);
+}
+
+function solveClues(clues,errEl){
+  const u=new Array(15).fill(0);
+  for(let c=0;c<31;c++){
+    if(clues[c]){const b=1<<clues[c];for(const si of CELL_SETS[c]){if(u[si]&b){errEl.textContent='Conflicting clues — a digit repeats within a group.';errEl.style.display='block';return null;}u[si]|=b;}}
+  }
+  const sols=[];
+  const a=[...clues],su=new Array(15).fill(0);
+  for(let c=0;c<31;c++){if(a[c]){const b=1<<a[c];for(const si of CELL_SETS[c])su[si]|=b;}}
+  function bt(c){
+    if(sols.length>1)return;
+    if(c===31){sols.push([...a]);return;}
+    if(a[c]){bt(c+1);return;}
+    for(let v=1;v<=7;v++){
+      if(sols.length>1)return;
+      const b=1<<v;let ok=true;
+      for(const si of CELL_SETS[c])if(su[si]&b){ok=false;break;}
+      if(ok){a[c]=v;for(const si of CELL_SETS[c])su[si]|=b;bt(c+1);a[c]=0;for(const si of CELL_SETS[c])su[si]^=b;}
+    }
+  }
+  bt(0);
+  if(sols.length===0){errEl.textContent='No valid solution exists for this puzzle.';errEl.style.display='block';return null;}
+  if(sols.length>1){errEl.textContent='Puzzle has multiple solutions — add more clues.';errEl.style.display='block';return null;}
+  return{clues,solution:sols[0]};
+}
+
+// ── Load bracket/notes format ─────────────────────────────────────────────────
+function loadNotes(){
+  const errEl=document.getElementById('notes-error');
+  errEl.style.display='none';
+  const raw=document.getElementById('notes-input').value.trim();
+
+  // Parse bracket format: [digits] or []
+  const tokens=[];
+  const re=/\[([1-7]*)\]/g;
+  let m;
+  while((m=re.exec(raw))!==null) tokens.push(m[1]);
+
+  if(tokens.length!==31){
+    errEl.textContent=`Expected 31 cells in brackets, found ${tokens.length}.`;
+    errEl.style.display='block';return;
+  }
+
+  // Classify each cell: single digit = confirmed clue, multiple = notes, empty = blank
+  const clues=new Array(31).fill(0);
+  const loadedNotes=Array.from({length:31},()=>new Set());
+
+  for(let i=0;i<31;i++){
+    const tok=tokens[i];
+    if(tok.length===0){
+      // empty cell
+    } else if(tok.length===1){
+      clues[i]=parseInt(tok);
+    } else {
+      // treat as notes - not a confirmed clue
+      for(const ch of tok) loadedNotes[i].add(parseInt(ch));
+    }
+  }
+
+  // Validate confirmed clues
+  const u=new Array(15).fill(0);
+  for(let c=0;c<31;c++){
+    if(clues[c]){
+      const b=1<<clues[c];
+      for(const si of CELL_SETS[c]){
+        if(u[si]&b){errEl.textContent=`Conflicting clues at cell ${c+1} — digit ${clues[c]} repeats within a group.`;errEl.style.display='block';return;}
+        u[si]|=b;
+      }
+    }
+  }
+
+  // Solve from confirmed clues only
+  const result=solveClues(clues,errEl);
+  if(!result)return;
+
+  // Apply puzzle with pre-loaded notes
+  puzzle={clues:result.clues,solution:result.solution};
+  userVals=[...result.clues];
+  notes=loadedNotes;
+  // Don't overwrite user-entered values from notes: if a cell has notes but is not a clue,
+  // keep userVals[i]=0 so notes display
+  for(let i=0;i<31;i++){
+    if(clues[i]===0 && loadedNotes[i].size===1){
+      // single note treated as a user-entered value (green digit), not a pencil mark
+      // Leave as note — user can confirm it themselves
+    }
+  }
+  errors=new Set();solved=false;showSolution=false;selected=null;noteMode=false;
+  document.getElementById('btn-pencil').classList.remove('on');
+  document.getElementById('btn-solution').textContent='Reveal Solution';
+  document.getElementById('btn-solution').classList.remove('active');
+  document.getElementById('solved-banner').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('notes-input').value='';
+  const n=clues.filter(v=>v).length;
+  document.getElementById('status').textContent=`Loaded — ${n} clues + notes`;
+  updateExportField();
+  renderGrid();
+}
+
+function applyLoadedPuzzle(clues,solution,inputId,statusMsg){
+  puzzle={clues,solution};
+  userVals=[...clues];
+  notes=Array.from({length:31},()=>new Set());
+  errors=new Set();solved=false;showSolution=false;selected=null;noteMode=false;
+  document.getElementById('btn-pencil').classList.remove('on');
+  document.getElementById('btn-solution').textContent='Reveal Solution';
+  document.getElementById('btn-solution').classList.remove('active');
+  document.getElementById('solved-banner').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById(inputId).value='';
+  document.getElementById('status').textContent=statusMsg;
+  updateExportField();
+  renderGrid();
 }
 
 document.addEventListener('keydown',e=>{
@@ -475,113 +847,6 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Backspace'||e.key==='Delete')placeNumber(0);
   if(e.key==='Escape'){selected=null;renderGrid();}
 });
-
-function exportPuzzle(){
-  if(!puzzle){return;}
-  const str=puzzle.clues.map(v=>v===0?'.':v).join('');
-  const field=document.getElementById('export-output');
-  field.value=str;
-  const msg=document.getElementById('export-msg');
-  // Try clipboard, fall back to just showing the string selected
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(str).then(()=>{
-      msg.textContent='Copied to clipboard!';msg.style.color='#27ae60';msg.style.display='block';
-      setTimeout(()=>msg.style.display='none',2500);
-    }).catch(()=>{
-      field.select();
-      msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';
-    });
-  } else {
-    field.select();
-    msg.textContent='Select the text above and copy manually.';msg.style.color='#888';msg.style.display='block';
-  }
-}
-
-function updateExportField(){
-  if(!puzzle)return;
-  const field=document.getElementById('export-output');
-  if(field)field.value=puzzle.clues.map(v=>v===0?'.':v).join('');
-}
-
-function loadPuzzle(){
-  const errEl=document.getElementById('load-error');
-  errEl.style.display='none';
-  // Normalise: replace Unicode ellipsis (…) and any run of dots with individual periods
-  const raw=document.getElementById('load-input').value.trim()
-    .replace(/\u2026/g,'...')   // Unicode ellipsis → three periods
-    .replace(/\.{2,}/g,m=>'.'.repeat(m.length)); // already fine, but keeps intent clear
-
-  // Validate length
-  if(raw.length!==31){
-    errEl.textContent=`String must be exactly 31 characters (got ${raw.length}).`;
-    errEl.style.display='block';return;
-  }
-  // Validate characters
-  if(!/^[1-7.]+$/.test(raw)){
-    errEl.textContent='Only digits 1–7 and periods (.) are allowed.';
-    errEl.style.display='block';return;
-  }
-
-  // Build clues array
-  const clues=raw.split('').map(c=>c==='.'?0:parseInt(c));
-
-  // Check for constraint conflicts in given clues
-  const u=new Array(15).fill(0);
-  for(let c=0;c<31;c++){
-    if(clues[c]){
-      const b=1<<clues[c];
-      for(const si of CELL_SETS[c]){
-        if(u[si]&b){
-          errEl.textContent='This string contains conflicting clues — a digit repeats within a group.';
-          errEl.style.display='block';return;
-        }
-        u[si]|=b;
-      }
-    }
-  }
-
-  // Solve to get the full solution (and check it has exactly one)
-  const sols=[];
-  const a=[...clues],su=new Array(15).fill(0);
-  for(let c=0;c<31;c++){if(a[c]){const b=1<<a[c];for(const si of CELL_SETS[c])su[si]|=b;}}
-  function bt(c){
-    if(sols.length>1)return;
-    if(c===31){sols.push([...a]);return;}
-    if(a[c]!==0){bt(c+1);return;}
-    for(let v=1;v<=7;v++){
-      if(sols.length>1)return;
-      const b=1<<v;let ok=true;
-      for(const si of CELL_SETS[c])if(su[si]&b){ok=false;break;}
-      if(ok){a[c]=v;for(const si of CELL_SETS[c])su[si]|=b;bt(c+1);a[c]=0;for(const si of CELL_SETS[c])su[si]^=b;}
-    }
-  }
-  bt(0);
-
-  if(sols.length===0){
-    errEl.textContent='No valid solution exists for this puzzle.';
-    errEl.style.display='block';return;
-  }
-  if(sols.length>1){
-    errEl.textContent='This puzzle has multiple solutions — add more clues to make it unique.';
-    errEl.style.display='block';return;
-  }
-
-  // All good — load it
-  puzzle={clues,solution:sols[0]};
-  userVals=[...clues];
-  notes=Array.from({length:31},()=>new Set());
-  errors=new Set();solved=false;showSolution=false;selected=null;noteMode=false;
-  document.getElementById('btn-pencil').classList.remove('on');
-  document.getElementById('btn-solution').textContent='Reveal Solution';
-  document.getElementById('btn-solution').classList.remove('active');
-  document.getElementById('solved-banner').style.display='none';
-  document.getElementById('win-overlay').style.display='none';
-  document.getElementById('load-input').value='';
-  const n=clues.filter(v=>v!==0).length;
-  document.getElementById('status').textContent=`Loaded — ${n} clues`;
-  updateExportField();
-  renderGrid();
-}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 buildGrid();
