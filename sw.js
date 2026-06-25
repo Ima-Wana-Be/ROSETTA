@@ -1,4 +1,4 @@
-const CACHE = 'rosetta-v1';
+const CACHE = 'rosetta-v2';
 const ASSETS = [
   '/ROSETTA/',
   '/ROSETTA/index.html',
