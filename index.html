@@ -87,6 +87,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       </label>
     </div>
 
+    <!-- Auto-clear notes toggle -->
+    <div class="toggle-row" style="margin-top:8px;">
+      <span>Auto-clear notes on entry<br><span style="font-size:10px;color:#aaa;">Placing a digit removes notes from peers</span></span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="auto-clear-toggle" checked onchange="autoClearNotes=this.checked">
+        <div class="toggle-track"></div>
+      </label>
+    </div>
+
     <!-- Load puzzle (clue string) -->
     <div class="section-divider">
       <div class="section-title">Load a puzzle — clue string</div>
@@ -183,9 +192,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 
 <!-- Actions -->
 <div class="actions">
-  <button class="btn-primary" onclick="generate()">New Puzzle</button>
+  <button class="btn-primary" id="btn-new" onclick="requestNewPuzzle()">New Puzzle</button>
   <button class="btn-secondary" id="btn-solution" onclick="toggleSolution()">Reveal Solution</button>
   <button class="btn-secondary" onclick="resetPuzzle()">Reset</button>
+</div>
+
+<!-- New puzzle confirmation — sits below buttons, only shown when needed -->
+<div id="confirm-bar" style="display:none;margin-top:10px;background:#fff8e1;border:1px solid #f0c040;border-radius:10px;padding:9px 16px;font-family:sans-serif;font-size:13px;color:#7a5800;text-align:center;width:100%;max-width:340px;">
+  Discard current progress?
+  <span style="margin-left:10px;">
+    <button onclick="confirmNewPuzzle()" style="padding:4px 12px;border-radius:6px;background:#2c2c2c;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px;">Yes</button>
+    <button onclick="cancelNewPuzzle()" style="padding:4px 12px;border-radius:6px;background:#fff;border:1px solid #d0c8bc;color:#555;font-size:12px;font-weight:600;cursor:pointer;">No</button>
+  </span>
 </div>
 
 <script>
@@ -373,6 +391,7 @@ function arraysEqual(a,b){
 
 // ── Puzzle generation ─────────────────────────────────────────────────────────
 let humanSolvableMode=true;
+let autoClearNotes=true;
 
 function randomSolution(){
   const u=new Array(15).fill(0),a=new Array(31).fill(0);
@@ -555,7 +574,20 @@ function placeNumber(num){
     else notes[selected].add(num);
   } else {
     if(num===0){userVals[selected]=0;notes[selected]=new Set();}
-    else{userVals[selected]=userVals[selected]===num?0:num;if(userVals[selected]!==0)notes[selected]=new Set();}
+    else{
+      userVals[selected]=userVals[selected]===num?0:num;
+      if(userVals[selected]!==0){
+        notes[selected]=new Set(); // always clear notes on the placed cell
+        // auto-clear this digit from notes in all peer cells
+        if(autoClearNotes){
+          for(const si of CELL_SETS[selected]){
+            for(const peer of SETS[si]){
+              if(peer!==selected) notes[peer].delete(num);
+            }
+          }
+        }
+      }
+    }
     selected=null;
   }
   errors=new Set();
@@ -568,6 +600,29 @@ function placeNumber(num){
   if(!noteMode&&errors.size===0&&userVals.every((v,i)=>v===puzzle.solution[i])){
     solved=true;showWin();
   }
+}
+
+function hasUserProgress(){
+  if(!puzzle) return false;
+  return userVals.some((v,i)=>v!==0&&v!==puzzle.clues[i])
+      || notes.some(s=>s.size>0);
+}
+
+function requestNewPuzzle(){
+  if(hasUserProgress()){
+    document.getElementById('confirm-bar').style.display='block';
+  } else {
+    generate();
+  }
+}
+
+function confirmNewPuzzle(){
+  document.getElementById('confirm-bar').style.display='none';
+  generate();
+}
+
+function cancelNewPuzzle(){
+  document.getElementById('confirm-bar').style.display='none';
 }
 
 function toggleNoteMode(){
@@ -643,6 +698,7 @@ function diffInfo(n){
 }
 
 function generate(){
+  document.getElementById('confirm-bar').style.display='none';
   document.getElementById('gen-overlay').style.display='flex';
   document.getElementById('gen-msg').textContent=humanSolvableMode?'Generating (logic-only)…':'Generating…';
   document.getElementById('solved-banner').style.display='none';
